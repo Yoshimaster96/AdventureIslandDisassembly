@@ -56,9 +56,9 @@ PadCur			.equ $08
 SetCHRBankFlag		.equ $0A
 GraphicsNMITaskFlag	.equ $0B
 GlobalNMITaskFlag	.equ $0C
-;UnkB_0D
-;UnkB_0E
-;UnkB_0F
+LifeSoundEffectFlag	.equ $0D
+InvSelectStartBits	.equ $0E
+SelectStartBits		.equ $0F
 ;UnkB_10
 ;UnkB_11
 ClearBridgeFlag		.equ $12
@@ -75,6 +75,7 @@ LevelDataPointer	.equ $1A
 AreaNum			.equ $37
 RoundNum		.equ $38
 
+NumLives		.equ $3F
 DemoFlag		.equ $40
 ;UnkB_41
 DemoCounter		.equ $42
@@ -254,13 +255,13 @@ Reset_ClearPage6:
 	bne Reset_ClearPage6			;/
 	ldx #$00				;\Set CHR bank to 0
 	jsr SetCHRBank_Do			;/
-	lda #$90
-	sta Mirror_PPUCtrl
-	sta PPU_CTRL
+	lda #$90				;\Init PPU_CTRL
+	sta Mirror_PPUCtrl			;|
+	sta PPU_CTRL				;/
 	jsr InitDemoDataPointer
 	ldx #$00
 	stx $053D
-	stx $A0
+	stx SoundEffectID
 	stx MusicID
 	stx SilenceAudioFlag
 	stx $41
@@ -458,23 +459,23 @@ LoadLevelMusic_Bonus:
 	rts
 LevelSet_MusicIDTable:
 	.db $02,$02,$03,$04,$04,$05,$05,$05,$05,$05,$06,$07
-CODE_81E3:
-	lda $0F
+CheckPauseGame:
+	lda SelectStartBits
 	and #$10
-	beq CODE_8202
+	beq CheckPauseGame_Exit
 	ldx #$01
 	stx SilenceAudioFlag
 	stx $41
 	lda #$11
-	sta $A0
-CODE_81F3:
+	sta SoundEffectID
+CheckPauseGame_PauseLoop:
 	jsr CODE_B755
-	lda $0F
+	lda SelectStartBits
 	and #$10
-	beq CODE_81F3
+	beq CheckPauseGame_PauseLoop
 	lda #$00
 	sta SilenceAudioFlag
-CODE_8202:
+CheckPauseGame_Exit:
 	rts
 
 
@@ -488,8 +489,33 @@ CODE_8202:
 
 
 
-
-
+CODE_8305:
+	lda $01
+	rol
+	ror $01
+	ror $00
+	dey
+	bne CODE_8305
+	rts
+SignExtend:
+	lda $00
+	bpl SignExtend_SkipNeg
+	lda #$FF
+	.db $CD
+SignExtend_SkipNeg:
+	lda #$00
+	sta $01
+	rts
+CODE_831C:
+	lda #$01
+	sta $4B
+	sta $4A
+	rts
+CODE_8323:
+	lda #$01
+	sta $45
+	sta $4D
+	rts
 
 
 
@@ -712,7 +738,10 @@ ImageSection15_Data:
 
 
 
-
+DATA_B702:
+	.db $E0,$20
+DATA_B704:
+	.db $03,$04
 NMI:
 	pha
 	lda GlobalNMITaskFlag
@@ -763,13 +792,13 @@ CODE_B759:
 	lda GraphicsNMITaskFlag
 	bne CODE_B759
 	jsr CODE_C2C2
-	jsr CODE_C506
+	jsr ReadJoypads
 	jsr LoadDemoInput
 	jsr CODE_B782
-	lda $0D
+	lda LifeSoundEffectFlag
 	beq CODE_B771
 	lda #$10
-	sta $A0
+	sta SoundEffectID
 CODE_B771:
 	inc $66
 	lda $66
@@ -779,7 +808,7 @@ CODE_B771:
 	sta $66
 CODE_B77D:
 	lda #$00
-	sta $0D
+	sta LifeSoundEffectFlag
 	rts
 CODE_B782:
 	lda #$10
@@ -837,10 +866,10 @@ LoadDemoInput:
 	inc DemoDataPointer+1
 	bne LoadDemoInput_Return
 InitDemoDataPointer:
-	lda #$4B
-	sta DemoDataPointer
-	lda #$D9
-	sta DemoDataPointer+1
+	lda #<LevelSetTable			;\Init demo data pointer
+	sta DemoDataPointer			;|(points to level set table?)
+	lda #>LevelSetTable			;|
+	sta DemoDataPointer+1			;/
 LoadDemoInput_Return:
 	rts
 GetPlayerInput:
@@ -1011,6 +1040,67 @@ WriteNormAttr_Loop:
 	sty WriteNormAttrFlag
 WriteNormAttr_Skip:
 	rts
+LevelPaletteTable:
+	.db $00,$1F,$21,$4F			;Area 1
+	.db $1F,$BF,$2F,$4F			;Area 2
+	.db $6F,$0F,$1F,$4F			;Area 3
+	.db $00,$3F,$CF,$4F			;Area 4
+	.db $1F,$9F,$7F,$4F			;Area 5
+	.db $1F,$52,$3F,$4F			;Area 6
+	.db $DF,$1F,$AF,$4F			;Area 7
+	.db $3F,$1F,$8F,$4F			;Area 8
+LevelPaletteData:
+	.db $2A,$1A,$2C,$2C,$17,$27,$29,$17,$27,$29,$17,$2C
+	.db $20,$11,$21,$18,$28,$21,$21,$17,$27,$1A,$29,$21
+	.db $17,$27,$07,$18,$28,$38,$30,$3C,$21,$26,$06,$30
+	.db $20,$11,$21,$20,$21,$10,$00,$00,$00,$00,$00,$00
+	.db $18,$08,$01,$01,$17,$27,$09,$17,$27,$09,$17,$01
+	.db $13,$22,$04,$17,$27,$37,$30,$33,$21,$26,$06,$30
+	.db $27,$37,$17,$0F,$0F,$0F,$26,$36,$15,$21,$11,$01
+	.db $2C,$3C,$11,$0F,$0F,$0F,$26,$36,$15,$23,$13,$04
+	.db $26,$36,$16,$0F,$0F,$0F,$26,$36,$15,$29,$19,$09
+	.db $18,$28,$08,$1A,$2A,$3A,$0F,$0F,$0F,$26,$06,$30
+	.db $10,$20,$00,$00,$10,$30,$0F,$0F,$0F,$26,$06,$30
+	.db $18,$28,$07,$1B,$29,$39,$26,$06,$30,$2C,$1C,$0C
+	.db $21,$30,$11,$18,$28,$38,$30,$3C,$21,$3C,$21,$11
+	.db $21,$30,$11,$0F,$0F,$0F,$30,$33,$21,$21,$13,$03
+DATA_B9F4:
+	.db <DATA_B9FA
+	.db <DATA_BA01
+	.db <DATA_BA0E
+DATA_B9F7:
+	.db >DATA_B9FA
+	.db >DATA_BA01
+	.db >DATA_BA0E
+DATA_B9FA:
+	.db $30,$01,$00,$26,$06,$2C,$FF
+DATA_BA01:
+	.db $20,$01,$03,$3C,$21,$11,$36,$01,$03,$26,$06,$30,$FF
+DATA_BA0E:
+	.db $20,$01,$03,$30,$23,$13,$36,$01,$03,$26,$06,$30,$FF
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
