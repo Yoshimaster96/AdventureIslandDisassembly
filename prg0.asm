@@ -76,7 +76,7 @@ CODE_807E:
 	ldy #$00
 	jsr CODE_8977
 	lda #$00
-	sta $0529
+	sta CurrentLifeBonus
 CODE_809A:
 	lda $39
 	cmp #$04
@@ -108,7 +108,7 @@ CODE_80BB:
 	jsr LoadLevelMusic
 	jsr CODE_C4D4
 CODE_80D7:
-	jsr CODE_B755
+	jsr UnkFunc_B755
 	jsr CODE_8276
 	jsr CODE_BCEE
 	jsr CODE_8E64
@@ -144,14 +144,16 @@ CODE_811C:
 	beq CODE_8135
 	jsr CODE_8126
 	jmp CODE_809A
+	
 CODE_8126:
 	lda #$00
 	sta $6D
 	sta $6E
 	sta $0534
 	lda #$0C
-	sta $0528
+	sta UnkB_0528
 	rts
+	
 CODE_8135:
 	lda DemoFlag
 	bne CODE_8140
@@ -211,26 +213,28 @@ CODE_8190:
 CODE_819C:
 	jsr CODE_B042
 	jmp CODE_8071
+	
 CODE_81A2:
 	ldx #$3C
-	stx $10
+	stx UnkB_10
 CODE_81A6:
-	jsr CODE_B755
+	jsr UnkFunc_B755
 	jsr CODE_8E64
 	jsr CODE_BCEE
 	jsr CODE_8EC9
-	dec $10
+	dec UnkB_10
 	bne CODE_81A6
 	lda #$00
 	sta SoundEffectID
-	jmp CODE_B755
+	jmp UnkFunc_B755
 CODE_81BD:
-	stx $10
+	stx UnkB_10
 CODE_81BF:
-	jsr CODE_B755
-	dec $10
+	jsr UnkFunc_B755
+	dec UnkB_10
 	bne CODE_81BF
 	rts
+	
 LoadLevelMusic:
 	lda $49
 	beq LoadLevelMusic_SkipBonus
@@ -265,7 +269,7 @@ CheckPauseGame:
 	lda #SE_PAUSE
 	sta SoundEffectID
 CheckPauseGame_PauseLoop:
-	jsr CODE_B755
+	jsr UnkFunc_B755
 	lda SelectStartBits
 	and #BUTTON_START
 	beq CheckPauseGame_PauseLoop
@@ -893,7 +897,7 @@ NMI_NoTasks:
 	pla
 IRQ:
 	rti
-CODE_B755:
+UnkFunc_B755:
 	lda #$FF
 	sta GraphicsNMITaskFlag
 CODE_B759:
@@ -1261,9 +1265,10 @@ ClearOAMBuffer:
 ClearOAMBuffer_Loop:
 	sta OAMBuffer,x
 	inx
-	bne ClearOAMBuffer_Loop,x
-
-
+	bne ClearOAMBuffer_Loop
+	rts
+UnkFunc_C4EF:
+	jsr UnkFunc_B755
 
 ReadJoypads:
 	ldx #$01
@@ -1337,19 +1342,19 @@ SoundEffectLengthTable:
 	.db $00,$14,$00,$00,$00,$14,$00,$00,$00,$18,$00,$00,$00,$00,$00,$3C
 	.db $20,$20,$00,$00,$00,$08,$00,$00,$00,$00,$00,$30,$00,$0C,$00,$00
 	.db $40,$40,$40,$40,$38,$38,$38,$38,$00,$04,$00,$00,$00,$0F,$00,$00
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 SoundEffect00_Init:
 	lda #$00
@@ -1373,11 +1378,65 @@ HandleSoundEffects_SkipDec:
 	bpl HandleSoundEffects_Loop
 	ldy #$00
 	lda SoundEffectID
-	
-	
-	
-	
-	
+	bmi HandleSoundEffects_Run
+	ldx SoundEffectInit
+	bmi HandleSoundEffects_Set
+	cmp #$14
+	bcs HandleSoundEffects_Set
+	ora #$80
+	sta SoundEffectID
+	asl
+	asl
+	tax
+HandleSoundEffects_InitTimersLoop:
+	lda SoundEffectLengthTable,x
+	beq HandleSoundEffects_SkipInitChan
+	sta SoundEffectTimers,y
+HandleSoundEffects_SkipInitChan:
+	inx
+	iny
+	cpy #$04
+	bcc HandleSoundEffects_InitTimersLoop
+	lda #$00
+	sta SoundEffectInit
+	beq HandleSoundEffects_Run
+HandleSoundEffects_Set:
+	stx SoundEffectID
+HandleSoundEffects_Run:
+	lda SoundEffectID
+	asl
+	asl
+	tax
+	tya
+	bne HandleSoundEffects_SkipInit
+	inx
+	inx
+HandleSoundEffects_SkipInit:
+	lda SoundEffectJumpTable+1,x
+	pha
+	lda SoundEffectJumpTable,x
+SoundEffect07_Main:
+	pha
+SoundEffect_NullMain:
+	rts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1600,6 +1659,16 @@ FrequencyTableHi:
 
 
 
+
+
+NoisePatchData:
+	.db $00,$00,$06,$20
+	.db $01,$00,$0E,$20
+	.db $1C,$00,$02,$68
+	.db $00,$00,$04,$20
+	.db $00,$00,$0C,$20
+	.db $1A,$00,$04,$A8
+	.db $1A,$00,$04,$48
 MusicDataPointers:
 	.dw MusicTitle_Sq1,MusicTitle_Sq2,MusicTitle_Tri,MusicTitle_Noise
 	.dw MusicJungle_Sq1,MusicJungle_Sq2,MusicJungle_Tri,MusicJungle_Noise
@@ -1616,7 +1685,28 @@ MusicDataPointers:
 	.dw MusicAreaClear_Sq1,MusicAreaClear_Sq2,MusicAreaClear_Tri,MusicAreaClear_Noise
 	.dw MusicRoundClear_Sq1,MusicRoundClear_Sq2,MusicRoundClear_Tri,MusicRoundClear_Noise
 ;MUSIC DATA
-;TODO: Figure out format
+;Each piece consists of a list of commands:
+;00-7E	This is interpreted differently depending on whether or not the channel is noise
+;For noise, the low 4 bits are written to MusicNoiseRepeatCounter, and the high 4 bits control the percussion patch to use.
+;For everything else, the high 4 bits control the octave, and the low 4 bits control the note in the octave.
+;7F	Play rest
+;80-EF	Set note length
+;F2-FF	Special commands:
+;F2		Unknown
+;F3		Return from call (for current channel)
+;F4 XX		Pitch shift current channel
+;F5 XX		Pitch shift all channels
+;F6 XX XX	Call another short piece of music (for current channel)
+;F7		Set loop point at current location (for current channel, default location is beginning of song)
+;F8 XX		Unknown
+;F9		Unknown
+;FA XX		Unknown
+;FB XX		Unknown
+;FC		Unknown
+;FD XX		Unknown
+;FE		Loop back to loop point (or beginning if F7 was never used)
+;FF		End channel, without looping
+;TODO: Separate called pieces from main tracks
 MusicTitle_Sq1:
 	.db $8B,$7F,$FD,$02,$96,$22,$F6,$03,$CD,$96,$3A,$FB,$01,$86,$22,$85
 	.db $22,$8B,$22,$86,$4A,$85,$4A,$8B,$4A,$86,$12,$85,$12,$86,$12,$85
@@ -2523,7 +2613,13 @@ GraphicsSet2BlockPalettes:
 
 
 
-.org $FFFA
+;;;;;;;;;;;;
+;INTERRUPTS;
+;;;;;;;;;;;;
+;Unused bytes
+	.db $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+	.db $FF
+;.org $FFFA
 	.dw NMI
 	.dw Reset
 	.dw IRQ

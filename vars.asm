@@ -1,6 +1,7 @@
 ;;;;;;;;;;;;;;;;
 ;GAME VARIABLES;
 ;;;;;;;;;;;;;;;;
+Temps			.equ $00
 Mirror_PPUCtrl		.equ $04
 Mirror_PPUMask		.equ $05
 Mirror_PPUScrollX	.equ $06
@@ -12,21 +13,32 @@ GlobalNMITaskFlag	.equ $0C
 LifeSoundEffectFlag	.equ $0D
 InvSelectStartBits	.equ $0E
 SelectStartBits		.equ $0F
-;UnkB_10
-;UnkB_11
+UnkB_10			.equ $10
+UnkB_11			.equ $11
 ClearBridgeFlag		.equ $12
 WritePaletteFlag	.equ $13
 WriteNormScrollFlag	.equ $14
 WriteSlopeScrollFlag	.equ $15
 WriteNormAttrFlag	.equ $16
 WriteSlopeAttrFlag	.equ $17
-;UnkW_18
+UnkW_18			.equ $18
 LevelDataPointer	.equ $1A
-;UnkW_1C
+UnkW_1C			.equ $1C
+UnkW_1E			.equ $1C
+
+
+
+UnkW_26			.equ $26
+
+
 
 
 AreaNum			.equ $37
 RoundNum		.equ $38
+
+
+
+
 
 NumLives		.equ $3F
 DemoFlag		.equ $40
@@ -34,49 +46,70 @@ PauseGraphicsFlag	.equ $41
 DemoCounter		.equ $42
 DemoInput		.equ $43
 
+
+
+
 LevelNum		.equ $51
 LevelSet		.equ $52
+
+
 
 TimerHi			.equ $76
 TimerLo			.equ $77
 
+
+
 SpriteDataPointer	.equ $82
 
-DemoDataPointer		.equ $9C
 
+
+DemoDataPointer		.equ $9C
+UnkB_9E			.equ $9E
+UnkB_9F			.equ $9F
 SoundEffectID		.equ $A0
 SoundEffectInit		.equ $A1
 SoundEffectTimers	.equ $A2
-
+UnkB_A6			.equ $A6
+UnkB_A7			.equ $A7
+UnkW_A8			.equ $A8
+UnkB_AA			.equ $AA
 MusicID			.equ $AB
 SilenceAudioFlag	.equ $AC
 MusicPointers		.equ $AD
 MusicNoteLengths	.equ $B5
 MusicNoteTimers		.equ $B9
-
+UnkPB_BD		.equ $BD
+UnkPB_C1		.equ $C1
+UnkPB_C9		.equ $C9
+UnkPB_D1		.equ $D1
+UnkPB_D5		.equ $D5
 MusicLoopPointers	.equ $D9
 MusicReturnPointers	.equ $E1
 MusicPitchShift		.equ $E9
-
-
+UnkPB_EC		.equ $EC
+UnkPB_F0		.equ $F0
+UnkPB_F4		.equ $F4
+UnkB_F8			.equ $F8
 MusicNoiseRepeatCounter	.equ $F9
 CurMusicChan		.equ $FA
 NumMusChansPlaying	.equ $FB
 CurMusicByte		.equ $FC
-
 PaletteVRAMBuffer	.equ $0140
 SlopeScrollAttrBuffer	.equ $0160
 SlopeScrollTileBuffer	.equ $01E0
-;UnkBuf_03E0
-;UnkBuf_0420
-
+UnkPB_03E0		.equ $03E0
+UnkPB_0420		.equ $0420
+UnkPB_0460		.equ $0460
+UnkPB_0498		.equ $0498
 SlopeScrollVRAMBuffer	.equ $04B4
 NormScrollVRAMBuffer	.equ $04D4
 SlopeAttrVRAMBuffer	.equ $04F2
 NormAttrVRAMBuffer	.equ $04FA
 CurrentStrips		.equ $0502
-
-
+UnkPB_0506		.equ $0506
+UnkPB_050B		.equ $050B
+UnkPB_0510		.equ $0510
+UnkPB_0515		.equ $0515
 NormScrollVRAMDest	.equ $051A
 SlopeScrollVRAMDestA	.equ $051C
 SlopeScrollVRAMDestB	.equ $051E
@@ -85,8 +118,11 @@ NormAttrVRAMDest	.equ $0521
 SlopeAttrVRAMDestA	.equ $0523
 SlopeAttrVRAMDestB	.equ $0525
 SlopeAttrDir		.equ $0527
-
+UnkB_0528		.equ $0528
 CurrentLifeBonus	.equ $0529
+
+
+
 
 CurRoom			.equ $054C
 CurScrollSlope		.equ $054D
@@ -100,7 +136,7 @@ Enemy_ID		.equ $0564
 Enemy_SubXPos		.equ $0574
 Enemy_ScreenXPos	.equ $0584
 Enemy_XVel		.equ $0594
-;Enemy_Unk05A4
+Enemy_Unk05A4		.equ $05A4
 Enemy_SubYPos		.equ $05B4
 Enemy_ScreenYPos	.equ $05C4
 Enemy_YVel		.equ $05D4
@@ -108,14 +144,14 @@ Enemy_WorldXPos		.equ $05E4
 Enemy_WorldYPos		.equ $05F4
 Enemy_ColiWidth		.equ $0604
 Enemy_ColiHeight	.equ $0614
-;Enemy_Unk0624
-;Enemy_Unk0634
+Enemy_Unk0624		.equ $0624
+Enemy_Unk0634		.equ $0634
 Enemy_Sprite		.equ $0644
-;Enemy_Unk0654
-;Enemy_Unk0664
-;Enemy_Unk0674
-
-
+Enemy_Unk0654		.equ $0654
+Enemy_Unk0664		.equ $0664
+Enemy_Unk0674		.equ $0674
+UnkB_0684		.equ $0684
+UnkB_0686		.equ $0686
 ColdBootStringRAM	.equ $0694
 ScoreCurrent		.equ $069A
 ScoreTop		.equ $06A3
@@ -163,7 +199,7 @@ ENEMY_ICICLE1		.equ $26
 ENEMY_ICICLE2		.equ $27
 ENEMY_SQUIDB1		.equ $28
 ENEMY_SQUIDB2		.equ $29
-ENEMY_ITEMFIRE		.equ $2A
+ENEMY_PROJSNAKEFIRE	.equ $2A
 ENEMY_PLATBONUS		.equ $30
 ENEMY_ROCK_POT		.equ $31
 ENEMY_FIRE_POT		.equ $32
