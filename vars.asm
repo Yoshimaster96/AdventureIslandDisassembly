@@ -54,15 +54,27 @@ LevelSet		.equ $52
 
 
 
+DrawSpriteX		.equ $5A
+
+
+DrawSpriteY		.equ $5D
+
+
 TimerHi			.equ $76
 TimerLo			.equ $77
+UnkB_78			.equ $78
+UnkB_79			.equ $79
+UnkB_7A			.equ $7A
+UnkB_7B			.equ $7B
+UnkPW_7C		.equ $7C
+EnemySettingsPointer	.equ $82
 
 
-
-SpriteDataPointer	.equ $82
-
+EnemySettingsIndex	.equ $87
 
 
+UnkW_99			.equ $99
+UnkB_9B			.equ $9B
 DemoDataPointer		.equ $9C
 UnkB_9E			.equ $9E
 UnkB_9F			.equ $9F
@@ -242,7 +254,7 @@ SE_BIGJUMP		.equ $01
 SE_TRIP			.equ $02
 SE_FRUIT		.equ $03
 SE_HARDOBJ		.equ $04
-;(unknown at the moment)
+SE_STONE		.equ $05
 SE_PROJ			.equ $06
 SE_SQUID		.equ $07
 SE_TRAMPOLINE		.equ $08

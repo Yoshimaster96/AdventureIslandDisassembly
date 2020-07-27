@@ -57,14 +57,14 @@ Reset_ClearPage6:
 	inx
 	stx DemoCounter
 	jsr CheckColdBoot
-CODE_8071:
-	jsr CODE_ADD3
+Reset_L7:
+	jsr TitleScreen
 	lda $47
-	bne CODE_807E
+	bne Reset_L8
 	lda #$00
 	sta AreaNum
 	sta RoundNum
-CODE_807E:
+Reset_L8:
 	jsr CODE_8126
 	lda #$00
 	sta $39
@@ -72,17 +72,17 @@ CODE_807E:
 	lda #$03
 	sta $3F
 	lda DemoFlag
-	bne CODE_809A
+	bne Reset_L9
 	ldy #$00
 	jsr CODE_8977
 	lda #$00
 	sta CurrentLifeBonus
-CODE_809A:
+Reset_L9:
 	lda $39
 	cmp #$04
-	bcc CODE_80A2
+	bcc Reset_L10
 	lda #$03
-CODE_80A2:
+Reset_L10:
 	sta $39
 	jsr CODE_AEB3
 	lda #$00
@@ -102,7 +102,7 @@ CODE_80BB:
 	lda #$00
 	sta $44
 	sta $45
-	sta $78
+	sta UnkB_78
 	ldx #$0A
 	jsr CODE_81BD
 	jsr LoadLevelMusic
@@ -127,7 +127,7 @@ CODE_80D7:
 	lda SelectStartBits
 	and #(BUTTON_SELECT|BUTTON_START)
 	beq CODE_80D7
-	jmp CODE_8071
+	jmp Reset_L7
 CODE_8108:
 	jsr CheckPauseGame
 	jmp CODE_80D7
@@ -143,7 +143,7 @@ CODE_811C:
 	dec $3F
 	beq CODE_8135
 	jsr CODE_8126
-	jmp CODE_809A
+	jmp Reset_L9
 	
 CODE_8126:
 	lda #$00
@@ -161,16 +161,16 @@ CODE_8135:
 	lda $47
 	bne CODE_8143
 CODE_8140:
-	jmp CODE_8071
+	jmp Reset_L7
 CODE_8143:
-	jmp CODE_807E
+	jmp Reset_L8
 CODE_8146:
 	jsr CODE_81A2
 	lda $49
 	bne CODE_8190
 	lda $46
 	bne CODE_819C
-	jsr CODE_AF16
+	jsr RoundClear
 	lda #$00
 	sta $39
 	sta $053E
@@ -185,7 +185,7 @@ CODE_8146:
 	and #$07
 	sta AreaNum
 CODE_816F:
-	jmp CODE_809A
+	jmp Reset_L9
 CODE_8172:
 	jsr CODE_AD8D
 	ldx AreaNum
@@ -212,7 +212,7 @@ CODE_8190:
 	jmp CODE_80BB
 CODE_819C:
 	jsr CODE_B042
-	jmp CODE_8071
+	jmp Reset_L7
 	
 CODE_81A2:
 	ldx #$3C
@@ -364,11 +364,64 @@ InitTimer:
 	sta TimerHi
 	lda #$FF
 	sta TimerLo
-
-
-
-
-
+	rts
+UnkFunc_8879:
+	sta $01
+	lda #$00
+	sta $00
+	ldy #$01
+	jsr UnkFunc_8305
+	lda TimerLo
+	clc
+	adc $00
+	sta TimerLo
+	lda TimerHi
+	adc $01
+	sta TimerHi
+	cmp UnkB_0528
+	beq UnkFunc_8879_L2
+	bcc UnkFunc_8879_L2
+UnkFunc_8879_L1:
+	lda UnkB_0528
+	sta TimerHi
+	lda #$FF
+	sta TimerLo
+UnkFunc_8879_L2:
+	rts
+DrawTimer:
+	lda #$52
+	sta DrawSpriteX
+	lda #$00
+	sta $59
+	lda #$24
+	sta DrawSpriteY
+	lda $48
+	ora UnkB_78
+	bne UnkFunc_8879_L2
+	ldy TimerHi
+	bmi UnkFunc_8879_L2
+	iny
+	tya
+	lsr
+	beq DrawTimer_LastOdd
+	tax
+DrawTimer_Loop:
+	lda #$0C
+	jsr DrawSprite
+	lda DrawSpriteX
+	clc
+	adc #$0A
+	sta DrawSpriteX
+	dex
+	bne DrawTimer_Loop
+DrawTimer_LastOdd:
+	ldy TimerHi
+	iny
+	tya
+	lsr
+	bcc UnkFunc_8879_L2
+	lda #$0D
+	jmp DrawSprite
 CheckTopScore:
 	ldx #$01
 CheckTopScore_Loop:
@@ -402,35 +455,35 @@ ConvertDigit_Null:
 	lda #$00
 ConvertDigit_Exit:
 	rts
-CODE_890C:
+DrawScore:
 	lda #$60
-	sta $5A
+	sta DrawSpriteX
 	lda #$00
 	sta $59
 	lda #$14
-	sta $5D
+	sta DrawSpriteY
 	lda #$2C
-	jmp CODE_C301
-CODE_891D:
+	jmp DrawSprite
+DrawLives:
 	lda $48
 	bne ConvertDigit_Exit
-	jsr CODE_890C
+	jsr DrawScore
 	lda #$1C
-	sta $5D
+	sta DrawSpriteY
 	lda #$18
-	sta $5A
+	sta DrawSpriteX
 	lda #$18
-	jsr CODE_C301
+	jsr DrawSprite
 	lda #$24
-	sta $5A
+	sta DrawSpriteX
 	lda #$0E
 	ldy DemoFlag
-	bne CODE_8940
+	bne DrawLives_L1
 	clc
 	adc NumLives
 	sbc #$00
-CODE_8940:
-	jmp CODE_C301
+DrawLives_L1:
+	jmp DrawSprite
 ColdBootString:
 	.db "HECTOR"
 CheckColdBoot:
@@ -454,18 +507,18 @@ CheckColdBoot_ResetStrLoop:
 	sta ColdBootStringRAM,x
 	dex
 	bpl CheckColdBoot_ResetStrLoop
-	ldy #$00
-	jsr ResetColdBoot
+	ldy #$00				;\Reset current score
+	jsr ResetScore				;/
 	ldy #$09
-ResetColdBoot:
+ResetScore:
 	iny
 	ldx #$06
 	lda #$FF
-ResetColdBoot_InitScore:
+ResetScore_Loop:
 	sta ScoreCurrent,y
 	iny
 	dex
-	bne ResetColdBoot_InitScore
+	bne ResetScore_Loop
 	lda #$F5
 	sta ScoreCurrent,y
 	iny
@@ -502,7 +555,7 @@ CheckLifeBonus_L2:
 	inc CurrentLifeBonus
 	jsr GiveLife
 CheckLifeBonus_Skip:
-	jsr CODE_88D9
+	jsr CheckTopScore
 	pla
 	tax
 	rts
@@ -514,7 +567,7 @@ GiveLife:
 	inc NumLives
 GiveLife_SkipInc:
 	rts
-GetPointsToGive:
+CalcPointsToGive:
 	sta $02
 	lda PointsHiDigit,y
 	sta $01
@@ -527,7 +580,27 @@ GetPointsToGive:
 	tax
 	rts
 GivePoints:
-	jsr GetPointsToGive
+	jsr CalcPointsToGive
+GivePoints_L1:
+	cpy #$07
+	beq GivePoints_L3
+	lda ScoreCurrent,x
+	cmp #$FF
+	bne GivePoints_L2
+	lda #$F5
+	sta ScoreCurrent,x
+GivePoints_L2:
+	inx
+	iny
+	bne GivePoints_L1
+GivePoints_L3:
+	ldx $03
+	ldy $00
+	lda ScoreCurrent,x
+	jsr ConvertDigit
+	clc
+	adc $01
+	cmp #$0A
 
 
 
@@ -536,8 +609,7 @@ GivePoints:
 
 
 
-
-Sprite_FruitInit:
+Enemy_FruitInit:
 	lda EnemyID,x
 	and #$07
 	sta $0664,x
@@ -551,13 +623,13 @@ Sprite_FruitInit:
 	sta $0674,x
 	lda #$00
 	sta $0684,x
-Sprite_FruitInit_Exit:
+Enemy_FruitInit_Exit:
 	rts
 FruitYOffset:
 	.db $48,$18,$4C,$0C,$48
 FruitLifetime:
 	.db $64,$64,$64,$32,$32
-Sprite_FruitMain:
+Enemy_FruitMain:
 	ldy Enemy_Status,x
 	dey
 
@@ -573,24 +645,75 @@ Sprite_FruitMain:
 
 
 
-SpriteInitJumpTable:
-	.dw Sprite_Null-1
-	.dw Sprite_Null-1
-	.dw Sprite_Null-1
-	.dw Sprite_Null-1
-	.dw Sprite04_Init-1
-	.dw Sprite05_Init-1
-	.dw Sprite_Pig1Init-1
-	.dw Sprite_Null-1
-	.dw Sprite_Null-1
-	.dw Sprite09_Init-1
-	.dw Sprite0A_Init-1
-	.dw Sprite_CeilingInit-1
-	.dw Sprite0C_Init-1
-	.dw Sprite_Null-1
-	.dw Sprite_SnailInit-1
+EnemyInitJumpTable:
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+	.dw Enemy04_Init-1
+	.dw Enemy05_Init-1
+	.dw Enemy_Pig1Init-1
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+	.dw Enemy09_Init-1
+	.dw Enemy0A_Init-1
+	.dw Enemy_CeilingInit-1
+	.dw Enemy0C_Init-1
+	.dw Enemy_Null-1
+	.dw Enemy_SnailInit-1
+	.dw Enemy0F_Init-1
+	.dw Enemy_FruitInit-1
+	.dw Enemy_FruitInit-1
+	.dw Enemy_FruitInit-1
+	.dw Enemy_FruitInit-1
+	.dw Enemy_FruitInit-1
 
 
+EnemyMainJumpTable:
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+	.dw Enemy_Null-1
+
+
+
+EnemySettings:
+	.db $00,$00,$00,$00,$00,$00,$BB,$05,$F8,$F4,$04,$08
+	.db $09,$05,$F8,$F8,$06,$06,$F1,$01,$F8,$F4,$04,$08
+	.db $01,$03,$F4,$F4,$06,$08,$01,$03,$F4,$F4,$06,$08
+	.db $FB,$07,$F8,$F4,$06,$0A,$DB,$06,$F8,$F8,$06,$06
+	.db $23,$07,$F8,$F8,$06,$06,$4B,$06,$F8,$F8,$04,$04
+	.db $4B,$06,$F8,$F8,$04,$04,$23,$09,$F8,$F8,$06,$06
+	.db $FB,$07,$F8,$F4,$08,$0A,$93,$06,$F8,$F8,$06,$06
+	.db $03,$06,$F4,$F8,$0A,$06,$FC,$09,$F4,$F4,$06,$06
+	.db $59,$02,$F8,$F8,$07,$07,$99,$04,$F8,$F8,$07,$07
+	.db $A1,$04,$F8,$F8,$07,$07,$01,$06,$F8,$F8,$07,$07
+	.db $A9,$04,$F8,$F8,$07,$07,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$11,$03,$F4,$F8,$0A,$06
+	.db $31,$03,$F8,$F8,$07,$07,$78,$00,$F4,$F8,$0A,$06
+	.db $80,$00,$F4,$F8,$0A,$06,$88,$00,$F4,$F8,$0A,$06
+	.db $11,$03,$F4,$F8,$08,$06,$11,$03,$F4,$F8,$0A,$06
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $F1,$05,$E8,$F8,$06,$0A,$F9,$05,$E8,$F8,$06,$0A
+	.db $23,$07,$F8,$F8,$06,$06,$B9,$04,$F8,$F4,$06,$0A
+	.db $84,$08,$E0,$00,$14,$01,$B9,$04,$F8,$F4,$06,$0A
+	.db $C9,$04,$F8,$F4,$06,$0A,$C9,$04,$F8,$F4,$06,$0A
+	.db $21,$05,$F8,$F4,$06,$0A,$21,$05,$F8,$F4,$06,$0A
+	.db $53,$0B,$F8,$FC,$04,$02,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $70,$00,$F8,$F0,$10,$10,$09,$05,$F8,$F8,$06,$06
+	.db $BB,$05,$F8,$F4,$04,$08,$03,$06,$F4,$F8,$0A,$06
+	.db $FB,$07,$F8,$F4,$06,$0A,$F1,$01,$F8,$F4,$04,$08
+	.db $02,$00,$F4,$F5,$0E,$08,$52,$00,$F4,$F5,$0E,$08
+	.db $D9,$04,$F8,$F8,$04,$04,$39,$05,$F8,$F8,$08,$08
+	.db $01,$00,$E0,$F8,$22,$0C,$01,$00,$E0,$F8,$22,$0C
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $01,$00,$E0,$F8,$22,$0C,$01,$00,$E0,$F8,$22,$0C
+	.db $03,$00,$F8,$F0,$04,$0C,$D9,$03,$F8,$F8,$00,$00
+	.db $03,$00,$F8,$F8,$04,$07,$CA,$02,$EC,$E4,$14,$18
+	.db $C9,$03,$F8,$F8,$05,$05,$00,$00,$00,$00,$00,$00
+	.db $01,$00,$F4,$F4,$04,$04,$00,$00,$F8,$F8,$00,$00
 
 
 
@@ -604,9 +727,9 @@ RunSprite:
 	and #$7F
 	asl
 	tay
-	lda SpriteMainJumpTable+1,y
+	lda EnemyMainJumpTable+1,y
 	pha
-	lda SpriteMainJumpTable,y
+	lda EnemyMainJumpTable,y
 	pha
 RunSprite_Exit:
 	rts
@@ -664,7 +787,7 @@ CODE_AEFF:
 	lda $00,y
 	clc
 	adc DATA_B1D4,x
-	jmp CODE_C301
+	jmp DrawSprite
 
 
 
@@ -1199,6 +1322,28 @@ DATA_BA0E:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 CheckPlayerEnemyCollision:
 	lda $72
 	bne CheckEnemyEnemyCollision_NoColi
@@ -1259,6 +1404,21 @@ CheckEnemyEnemyCollision_NoColi:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ClearOAMBuffer:
 	ldx #$00
 	lda #$F0
@@ -1269,7 +1429,18 @@ ClearOAMBuffer_Loop:
 	rts
 UnkFunc_C4EF:
 	jsr UnkFunc_B755
-
+	ldx #$05
+UnkFunc_C4EF_L1:
+	lda ClearBridgeFlag,x
+	bne UnkFunc_C4EF
+	dex
+	bpl UnkFunc_C4EF_L1
+	lda #$00
+	sta Mirror_PPUMask
+	lda #$00
+UnkFunc_C4EF_L2:
+	sta Mirror_PPUCtrl
+	jmp UnkFunc_B755
 ReadJoypads:
 	ldx #$01
 	stx JOY1
@@ -1419,6 +1590,28 @@ SoundEffect07_Main:
 	pha
 SoundEffect_NullMain:
 	rts
+UnkFunc_C6CA:
+	dec UnkB_A6
+	beq UnkFunc_C6CA_L1
+	pla
+	pla
+UnkFunc_C6CA_L1:
+	rts
+SoundEffect12_Init:
+	ldy #$4C
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1481,13 +1674,12 @@ HandleMusic_InitPtrs:
 	dex
 	bpl HandleMusic_InitPtrs
 	inx
-	
-	
-	
-	
-	
-	
-	
+	stx MusicPitchShift
+	stx MusicPitchShift+1
+	stx MusicPitchShift+2
+	stx UnkPB_EC
+	stx UnkPB_EC+1
+	stx UnkPB_EC+2
 	stx MusicNoiseRepeatCounter
 	inx
 	stx MusicNoteTimers
@@ -1499,13 +1691,13 @@ HandleMusic_InitPtrs:
 	stx MusicNoteLengths+2
 	stx MusicNoteLengths+3
 	lda #$08
-	
-	
-	
-	
-	
-	
-	
+	sta UnkPB_F4
+	sta UnkPB_F4+1
+	sta UnkPB_F4+2
+	lda #$80
+	sta UnkPB_F0
+	sta UnkPB_F0+1
+	sta UnkPB_F0+2
 HandleMusic_SkipLoad:
 	lda #$03
 	sta NumMusChansPlaying
@@ -1688,7 +1880,7 @@ MusicDataPointers:
 ;Each piece consists of a list of commands:
 ;00-7E	This is interpreted differently depending on whether or not the channel is noise
 ;For noise, the low 4 bits are written to MusicNoiseRepeatCounter, and the high 4 bits control the percussion patch to use.
-;For everything else, the high 4 bits control the octave, and the low 4 bits control the note in the octave.
+;For everything else, bits 0-2 octave, and bits 3-6 control the note in the octave.
 ;7F	Play rest
 ;80-EF	Set note length
 ;F2-FF	Special commands:
@@ -1705,70 +1897,116 @@ MusicDataPointers:
 ;FC		Unknown
 ;FD XX		Unknown
 ;FE		Loop back to loop point (or beginning if F7 was never used)
-;FF		End channel, without looping
-;TODO: Separate called pieces from main tracks
+;FF		End channel without looping
 MusicTitle_Sq1:
-	.db $8B,$7F,$FD,$02,$96,$22,$F6,$03,$CD,$96,$3A,$FB,$01,$86,$22,$85
-	.db $22,$8B,$22,$86,$4A,$85,$4A,$8B,$4A,$86,$12,$85,$12,$86,$12,$85
-	.db $7F,$86,$3A,$85,$3A,$86,$3A,$85,$7F,$FC,$FB,$02,$8B,$2A,$A1,$7F
-	.db $D8,$32,$FF
+	.db $8B,$7F,$FD,$02,$96,$22
+	.db $F6
+	.dw Music_TitleEndingPiece_Sq1
+	.db $96,$3A,$FB,$01,$86,$22,$85,$22,$8B,$22,$86,$4A,$85,$4A,$8B,$4A
+	.db $86,$12,$85,$12,$86,$12,$85,$7F,$86,$3A,$85,$3A,$86,$3A,$85,$7F
+	.db $FC,$FB,$02,$8B,$2A,$A1,$7F,$D8,$32,$FF
 MusicTitle_Sq2:
-	.db $8B,$7F,$FD,$02,$96,$49,$F6,$32,$CD,$22,$12,$FB,$01,$8B,$02,$12
-	.db $22,$2A,$3A,$4A,$52,$03,$FC,$FB,$02,$8B,$02,$A1,$7F,$D8,$0A,$FF
+	.db $8B,$7F,$FD,$02,$96,$49
+	.db $F6
+	.dw Music_TitleEndingPiece_Sq2
+	.db $22,$12,$FB,$01,$8B,$02,$12,$22,$2A,$3A,$4A,$52,$03,$FC,$FB,$02
+	.db $8B,$02,$A1,$7F,$D8,$0A,$FF
 MusicTitle_Tri:
-	.db $8B,$7F,$FD,$02,$F6,$77,$CD,$F9,$FB,$01,$FA,$06,$8B,$29,$4A,$29
-	.db $4A,$01,$02,$01,$02,$FC,$FB,$02,$8B,$4A,$A1,$7F,$D8,$52,$FF,$84
-	.db $12,$83,$11,$FD,$02,$8B,$11,$96,$1F,$16,$8B,$12,$02,$84,$12
+	.db $8B,$7F,$FD,$02
+	.db $F6
+	.dw Music_TitleEndingPiece_Tri
+	.db $F9,$FB,$01,$FA,$06,$8B,$29,$4A,$29,$4A,$01,$02,$01,$02,$FC,$FB
+	.db $02,$8B,$4A,$A1,$7F,$D8,$52,$FF,$84,$12,$83,$11,$FD,$02,$8B,$11
+	.db $96,$1F,$16,$8B,$12,$02,$84,$12
 MusicTitle_Noise:
 	.db $83,$11,$8B,$11,$96,$13,$8B,$11,$FB,$01,$7F,$13,$7F,$12,$84,$12
 	.db $83,$11,$FC,$FB,$02,$11,$03,$83,$13,$82,$11,$83,$13,$82,$11,$83
 	.db $13,$82,$11,$83,$13,$82,$11,$83,$13,$82,$11,$83,$13,$82,$11
 MusicBoss_Noise:
-	.db $FF,$96,$2A,$12,$22,$8B,$03,$0B,$13,$AC,$4A,$8B,$3A,$96,$22,$4A
-	.db $03,$13,$8B,$4B,$43,$3B,$96,$13,$8B,$13,$0B,$13,$2B,$23,$2B,$3B
-	.db $96,$23,$13,$03,$0B,$13,$8B,$7F,$4A,$03,$52,$12,$2A,$4A,$0B,$F3
+	.db $FF
+Music_TitleEndingPiece_Sq1:
+	.db $96,$2A,$12,$22,$8B,$03,$0B,$13,$AC,$4A,$8B,$3A,$96,$22,$4A,$03
+	.db $13,$8B,$4B,$43,$3B,$96,$13,$8B,$13,$0B,$13,$2B,$23,$2B,$3B,$96
+	.db $23,$13,$03,$0B,$13,$8B,$7F,$4A,$03,$52,$12,$2A,$4A,$0B,$F3
+Music_TitleEndingPiece_Sq2:
 	.db $96,$02,$49,$02,$8B,$4A,$4A,$4A,$86,$22,$85,$2A,$86,$03,$85,$13
 	.db $86,$23,$85,$2B,$86,$3B,$85,$23,$86,$13,$85,$03,$8B,$4A,$02,$96
 	.db $22,$A1,$4A,$8B,$4A,$23,$1B,$13,$96,$4A,$8B,$13,$0B,$13,$13,$0B
 	.db $13,$23,$96,$52,$3A,$8B,$4A,$2A,$4A,$02,$4A,$7F,$7F,$12,$3A,$12
-	.db $39,$51,$22,$4A,$F3,$8B,$FA,$06,$29,$4A,$01,$4A,$11,$4A,$21,$4A
-	.db $39,$2A,$39,$2A,$F9,$86,$01,$85,$3B,$86,$4B,$85,$53,$86,$01,$85
-	.db $53,$86,$4B,$85,$3B,$8B,$FA,$06,$29,$4A,$29,$4A,$21,$4A,$19,$4A
-	.db $51,$4A,$12,$4A,$31,$4A,$51,$4A,$39,$3A,$49,$4A,$51,$52,$59,$5A
-	.db $F9,$96,$02,$0A,$12,$8B,$7F,$32,$8B,$FA,$06,$11,$12,$09,$0A,$01
-	.db $02,$01,$02,$F3
+	.db $39,$51,$22,$4A,$F3
+Music_TitleEndingPiece_Tri:
+	.db $8B,$FA,$06,$29,$4A,$01,$4A,$11,$4A,$21,$4A,$39,$2A,$39,$2A,$F9
+	.db $86,$01,$85,$3B,$86,$4B,$85,$53,$86,$01,$85,$53,$86,$4B,$85,$3B
+	.db $8B,$FA,$06,$29,$4A,$29,$4A,$21,$4A,$19,$4A,$51,$4A,$12,$4A,$31
+	.db $4A,$51,$4A,$39,$3A,$49,$4A,$51,$52,$59,$5A,$F9,$96,$02,$0A,$12
+	.db $8B,$7F,$32,$8B,$FA,$06,$11,$12,$09,$0A,$01,$02,$01,$02,$F3
 MusicJungle_Sq1:
 	.db $88,$02,$12,$7F,$2A,$4A,$7F,$03,$7F,$23,$7F,$1B,$13,$7F,$7F,$02
-	.db $F7,$F4,$02,$F6,$F2,$CF,$F4,$00,$52,$F9,$C0,$F6,$F2,$CF,$4A,$F9
-	.db $C0,$7F,$88,$03,$7F,$0B,$13,$A0,$7F,$8B,$03,$03,$8A,$0B,$88,$13
-	.db $7F,$F4,$02,$F6,$01,$D0,$F4,$00,$52,$F9,$C0,$F6,$F2,$CF,$4A,$F9
-	.db $88,$7F,$2A,$22,$2A,$4A,$2A,$4A,$03,$F6,$0A,$D0,$90,$2B,$88,$F6
-	.db $13,$D0,$F6,$0A,$D0,$2B,$2B,$F6,$13,$D0,$03,$03,$7F,$0B,$13,$7F
-	.db $7F,$4A,$03,$03,$7F,$0B,$13,$7F,$4B,$7F,$2B,$7F,$7F,$E8,$FE
+	.db $F7,$F4,$02
+	.db $F6
+	.dw Music_JunglePieceA1_Sq1
+	.db $F4,$00,$52,$F9,$C0
+	.db $F6
+	.dw Music_JunglePieceA1_Sq1
+	.db $4A,$F9,$C0,$7F,$88,$03,$7F,$0B,$13,$A0,$7F,$8B,$03,$03,$8A,$0B
+	.db $88,$13,$7F,$F4,$02
+	.db $F6
+	.dw Music_JunglePieceA2_Sq1
+	.db $F4,$00,$52,$F9,$C0
+	.db $F6
+	.dw Music_JunglePieceA1_Sq1
+	.db $4A,$F9
+	.db $88,$7F,$2A,$22,$2A,$4A,$2A,$4A,$03
+	.db $F6
+	.dw Music_JunglePieceB1_Sq1
+	.db $90,$2B,$88
+	.db $F6
+	.dw Music_JunglePieceB2_Sq1
+	.db $F6
+	.dw Music_JunglePieceB1_Sq1
+	.db $2B,$2B
+	.db $F6
+	.dw Music_JunglePieceB2_Sq1
+	.db $03,$03,$7F,$0B,$13,$7F,$7F,$4A,$03,$03,$7F,$0B,$13,$7F,$4B,$7F
+	.db $2B,$7F,$7F,$E8,$FE
 MusicJungle_Sq2:
 	.db $88,$49,$02,$7F,$12,$2A,$7F,$4A,$7F,$03,$7F,$5A,$52,$7F,$7F,$01
-	.db $F7,$F4,$02,$F6,$1B,$D0,$F4,$00,$52,$3A,$F9,$C0,$F6,$1B,$D0,$4A
-	.db $2A,$F9,$C0,$7F,$88,$4A,$7F,$4A,$4A,$A0,$7F,$8B,$4A,$4A,$8A,$4A
-	.db $88,$4A,$7F,$F4,$02,$F6,$2A,$D0,$F4,$00,$52,$3A,$F9,$C0,$F6,$1B
-	.db $D0,$4A,$2A,$88,$F9,$7F,$2A,$22,$2A,$2A,$02,$2A,$4A,$90,$4A,$88
-	.db $03,$A0,$1B,$88,$2A,$90,$4A,$88,$03,$90,$1B,$88,$2B,$1B,$4A,$90
-	.db $13,$88,$03,$A0,$13,$88,$52,$13,$13,$52,$13,$7F,$2B,$13,$52,$3A
-	.db $4A,$7F,$3A,$52,$7F,$7F,$7F,$3A,$4A,$7F,$3A,$52,$7F,$23,$7F,$03
-	.db $7F,$7F,$E8,$FE
+	.db $F7,$F4,$02
+	.db $F6
+	.dw Music_JunglePieceA1_Sq2
+	.db $F4,$00,$52,$3A,$F9,$C0
+	.db $F6
+	.dw Music_JunglePieceA1_Sq2
+	.db $4A,$2A,$F9,$C0,$7F,$88,$4A,$7F,$4A,$4A,$A0,$7F,$8B,$4A,$4A,$8A
+	.db $4A,$88,$4A,$7F,$F4,$02
+	.db $F6
+	.dw Music_JunglePieceA2_Sq2
+	.db $F4,$00,$52,$3A,$F9,$C0
+	.db $F6
+	.dw Music_JunglePieceA1_Sq2
+	.db $4A,$2A,$88,$F9,$7F,$2A,$22,$2A,$2A,$02,$2A,$4A,$90,$4A,$88,$03
+	.db $A0,$1B,$88,$2A,$90,$4A,$88,$03,$90,$1B,$88,$2B,$1B,$4A,$90,$13
+	.db $88,$03,$A0,$13,$88,$52,$13,$13,$52,$13,$7F,$2B,$13,$52,$3A,$4A
+	.db $7F,$3A,$52,$7F,$7F,$7F,$3A,$4A,$7F,$3A,$52,$7F,$23,$7F,$03,$7F
+	.db $7F,$E8,$FE
 MusicJungle_Tri:
 	.db $88,$29,$49,$7F,$02,$12,$7F,$2A,$7F,$4A,$7F,$2A,$02,$7F,$7F,$01
 	.db $F7,$7F,$88,$2A,$7F,$7F,$29,$7F,$7F,$49,$02,$2A,$7F,$2A,$29,$7F
-	.db $2A,$2A,$2A,$90,$FA,$08,$01,$02,$01,$F9,$88,$02,$7F,$F6,$32,$D0
+	.db $2A,$2A,$2A,$90,$FA,$08,$01,$02,$01,$F9,$88,$02,$7F
+	.db $F6
+	.dw Music_JunglePiece_Tri
 	.db $FA,$08,$21,$02,$F9,$88,$22,$12,$21,$7F,$7F,$02,$7F,$51,$49,$51
 	.db $90,$FA,$08,$29,$2A,$02,$29,$F9,$88,$29,$90,$49,$88,$49,$90,$49
 	.db $01,$98,$29,$88,$02,$7F,$7F,$4A,$02,$8B,$29,$02,$8A,$49,$88,$2A
-	.db $7F,$29,$01,$90,$FA,$08,$01,$01,$02,$01,$F9,$88,$F6,$32,$D0,$39
-	.db $88,$02,$7F,$7F,$22,$12,$98,$39,$88,$02,$7F,$51,$49,$51,$90,$FA
-	.db $08,$29,$2A,$02,$F9,$88,$29,$7F,$7F,$29,$21,$29,$49,$29,$49,$02
-	.db $98,$49,$02,$88,$2A,$02,$98,$49,$02,$88,$2A,$02,$98,$51,$12,$88
-	.db $42,$2A,$98,$51,$90,$12,$88,$2A,$0A,$51,$21,$39,$7F,$02,$01,$7F
-	.db $7F,$7F,$21,$39,$7F,$02,$01,$7F,$52,$7F,$4A,$7F,$01,$11,$7F,$29
-	.db $7F,$49,$90,$02,$0A,$12,$FE
+	.db $7F,$29,$01,$90,$FA,$08,$01,$01,$02,$01,$F9,$88
+	.db $F6
+	.dw Music_JunglePiece_Tri
+	.db $39,$88,$02,$7F,$7F,$22,$12,$98,$39,$88,$02,$7F,$51,$49,$51,$90
+	.db $FA,$08,$29,$2A,$02,$F9,$88,$29,$7F,$7F,$29,$21,$29,$49,$29,$49
+	.db $02,$98,$49,$02,$88,$2A,$02,$98,$49,$02,$88,$2A,$02,$98,$51,$12
+	.db $88,$42,$2A,$98,$51,$90,$12,$88,$2A,$0A,$51,$21,$39,$7F,$02,$01
+	.db $7F,$7F,$7F,$21,$39,$7F,$02,$01,$7F,$52,$7F,$4A,$7F,$01,$11,$7F
+	.db $29,$7F,$49,$90,$02,$0A,$12,$FE
 MusicJungle_Noise:
 	.db $88,$42,$7F,$41,$90,$43,$88,$42,$02,$41,$7F,$F7,$FD,$06,$90,$31
 	.db $88,$42,$FC,$42,$7F,$41,$90,$32,$FD,$06,$90,$31,$88,$42,$FC,$42
@@ -1777,35 +2015,82 @@ MusicJungle_Noise:
 	.db $42,$FC,$7F,$41,$7F,$43,$7F,$43,$7F,$41,$90,$31,$88,$45,$7F,$41
 	.db $90,$31,$88,$43,$7F,$42,$FD,$04,$90,$31,$88,$42,$FC,$7F,$44,$7F
 	.db $41,$90,$31,$88,$42,$41,$7F,$42,$7F,$90,$31,$88,$41,$90,$43,$88
-	.db $42,$FE,$7F,$88,$52,$7F,$5A,$03,$A0,$7F,$88,$52,$7F,$5A,$03,$7F
-	.db $03,$5A,$03,$FA,$08,$90,$13,$13,$03,$F3,$90,$2B,$88,$33,$A0,$3B
-	.db $88,$13,$F3,$33,$90,$3B,$88,$4B,$3B,$13,$F3,$7F,$88,$3A,$7F,$3A
-	.db $3A,$A0,$7F,$88,$3A,$7F,$3A,$3A,$7F,$3A,$32,$3A,$FA,$08,$90,$52
-	.db $52,$F3,$39,$90,$12,$88,$0A,$90,$02,$39,$98,$F3
+	.db $42,$FE
+Music_JunglePieceA1_Sq1:
+	.db $7F,$88,$52,$7F,$5A,$03,$A0,$7F,$88,$52,$7F,$5A,$03,$7F,$03
+Music_JunglePieceA2_Sq1:
+	.db $5A,$03,$FA,$08,$90,$13,$13,$03,$F3
+Music_JunglePieceB1_Sq1:
+	.db $90,$2B,$88,$33,$A0,$3B,$88,$13,$F3
+Music_JunglePieceB2_Sq1:
+	.db $33,$90,$3B,$88,$4B,$3B,$13,$F3
+Music_JunglePieceA1_Sq2:
+	.db $7F,$88,$3A,$7F,$3A,$3A,$A0,$7F,$88,$3A,$7F,$3A,$3A,$7F,$3A
+Music_JunglePieceA2_Sq2:
+	.db $32,$3A,$FA,$08,$90,$52,$52,$F3
+Music_JunglePiece_Tri:
+	.db $39,$90,$12,$88,$0A,$90,$02,$39,$98,$F3
 MusicDark_Sq1:
 	.db $F8,$40,$8F,$7F,$5A,$03,$5A,$52,$5A,$0B,$1B,$F7,$9E,$FA,$0F,$23
 	.db $33,$1B,$F9,$8F,$5A,$85,$59,$0A,$1A,$88,$22,$87,$7F,$8F,$23,$7F
-	.db $33,$1B,$7F,$5A,$7F,$F4,$03,$F6,$1F,$D1,$F4,$0C,$F6,$29,$D1,$F4
-	.db $05,$F6,$32,$D1,$F4,$03,$F6,$39,$D1,$F4,$00,$F6,$46,$D1,$FE
+	.db $33,$1B,$7F,$5A,$7F,$F4,$03
+	.db $F6
+	.dw Music_DarkPieceA
+	.db $F4,$0C
+	.db $F6
+	.dw Music_DarkPieceB
+	.db $F4,$05
+	.db $F6
+	.dw Music_DarkPieceC
+	.db $F4,$03
+	.db $F6
+	.dw Music_DarkPieceD
+	.db $F4,$00
+	.db $F6
+	.dw Music_DarkPieceE
+	.db $FE
 MusicDark_Sq2:
-	.db $F8,$00,$F6,$4D,$D1,$F7,$9E,$FA,$0F,$3A,$4A,$32,$32,$F9,$8F,$7F
-	.db $3A,$7F,$4A,$32,$7F,$32,$7F,$F6,$1F,$D1,$F6,$29,$D1,$F6,$32,$D1
-	.db $F6,$39,$D1,$F6,$46,$D1,$FE
+	.db $F8,$00
+	.db $F6
+	.dw Music_DarkPieceF
+	.db $F7,$9E,$FA,$0F,$3A,$4A,$32,$32,$F9,$8F,$7F,$3A,$7F,$4A,$32,$7F
+	.db $32,$7F
+	.db $F6
+	.dw Music_DarkPieceA
+	.db $F6
+	.dw Music_DarkPieceB
+	.db $F6
+	.dw Music_DarkPieceC
+	.db $F6
+	.dw Music_DarkPieceD
+	.db $F6
+	.dw Music_DarkPieceE
+	.db $FE
 MusicDark_Tri:
-	.db $F6,$4D,$D1,$F7,$9E,$FA,$0F,$22,$59,$49,$1A,$F9,$8F,$7F,$21,$7F
-	.db $59,$49,$7F,$1A,$7F,$9E,$49,$8F,$51,$AD,$59,$8F,$51,$59,$7F,$4A
-	.db $42,$22,$3A,$32,$0A,$02,$12,$1A,$12,$1A,$9E,$7F,$88,$1A,$87,$59
-	.db $88,$22,$87,$59,$88,$32,$87,$7F,$88,$4A,$87,$7F,$8F,$03,$85,$5A
-	.db $03,$5A,$8F,$4A,$7F,$7F,$7F,$03,$4A,$7F,$32,$59,$85,$59,$02,$59
-	.db $8F,$51,$59,$FE
+	.db $F6
+	.dw Music_DarkPieceF
+	.db $F7,$9E,$FA,$0F,$22,$59,$49,$1A,$F9,$8F,$7F,$21,$7F,$59,$49,$7F
+	.db $1A,$7F,$9E,$49,$8F,$51,$AD,$59,$8F,$51,$59,$7F,$4A,$42,$22,$3A
+	.db $32,$0A,$02,$12,$1A,$12,$1A,$9E,$7F,$88,$1A,$87,$59,$88,$22,$87
+	.db $59,$88,$32,$87,$7F,$88,$4A,$87,$7F,$8F,$03,$85,$5A,$03,$5A,$8F
+	.db $4A,$7F,$7F,$7F,$03,$4A,$7F,$32,$59,$85,$59,$02,$59,$8F,$51,$59
+	.db $FE
 MusicDark_Noise:
 	.db $E9,$7F,$85,$13,$F7,$9E,$13,$8F,$11,$85,$13,$8F,$FD,$02,$12,$7F
 	.db $FC,$9E,$12,$8F,$12,$02,$12,$BC,$02,$8F,$14,$04,$13,$85,$13,$8F
-	.db $11,$02,$13,$7F,$12,$02,$85,$13,$FE,$9E,$5A,$8F,$4A,$AD,$1A,$8F
-	.db $12,$1A,$F3,$7F,$49,$41,$21,$39,$31,$09,$01,$F3,$29,$31,$29,$31
-	.db $BC,$7F,$F3,$7F,$8F,$7F,$32,$4A,$03,$1B,$03,$7F,$32,$1A,$85,$F3
-	.db $59,$02,$59,$8F,$51,$59,$F3,$8F,$7F,$5A,$52,$4A,$42,$3A,$32,$2A
-	.db $F3
+	.db $11,$02,$13,$7F,$12,$02,$85,$13,$FE
+Music_DarkPieceA:
+	.db $9E,$5A,$8F,$4A,$AD,$1A,$8F,$12,$1A,$F3
+Music_DarkPieceB:
+	.db $7F,$49,$41,$21,$39,$31,$09,$01,$F3
+Music_DarkPieceC:
+	.db $29,$31,$29,$31,$BC,$7F,$F3
+Music_DarkPieceD:
+	.db $7F,$8F,$7F,$32,$4A,$03,$1B,$03,$7F,$32,$1A,$85,$F3
+Music_DarkPieceE:
+	.db $59,$02,$59,$8F,$51,$59,$F3
+Music_DarkPieceF:
+	.db $8F,$7F,$5A,$52,$4A,$42,$3A,$32,$2A,$F3
 MusicBeach_Sq1:
 	.db $F8,$40,$8C,$FA,$18,$29,$F9,$4B,$FA,$18,$23,$F9,$2B,$FA,$18,$5A
 	.db $F9,$03,$4A,$02,$2A,$D4,$7F,$F7,$A4,$4A,$03,$98,$13,$A4,$42,$23
@@ -1875,18 +2160,30 @@ MusicGray_Noise:
 	.db $F5,$02,$8A,$11,$7F,$85,$12,$8A,$14,$02,$13,$F7,$FD,$04,$8A,$11
 	.db $7F,$12,$7F,$12,$7F,$14,$FC,$FE
 MusicBonus_Sq1:
-	.db $F8,$00,$86,$F6,$E6,$D4,$4B,$02,$43,$02,$4B,$02,$13,$03,$F6,$E6
-	.db $D4,$03,$13,$23,$2B,$3B,$2B,$23,$1B,$FE
+	.db $F8,$00,$86
+	.db $F6
+	.dw Music_BonusPiece_Sq1
+	.db $4B,$02,$43,$02,$4B,$02,$13,$03
+	.db $F6
+	.dw Music_BonusPiece_Sq1
+	.db $03,$13,$23,$2B,$3B,$2B,$23,$1B,$FE
 MusicBonus_Sq2:
-	.db $F8,$00,$86,$F6,$EF,$D4,$03,$7F,$5A,$7F,$03,$7F,$52,$4A,$F6,$EF
-	.db $D4,$4A,$52,$03,$13,$23,$13,$03,$5A,$FE
+	.db $F8,$00,$86
+	.db $F6
+	.dw Music_BonusPiece_Sq2
+	.db $03,$7F,$5A,$7F,$03,$7F,$52,$4A
+	.db $F6
+	.dw Music_BonusPiece_Sq2
+	.db $4A,$52,$03,$13,$23,$13,$03,$5A,$FE
 MusicBonus_Tri:
 	.db $86,$02,$02,$7F,$3A,$7F,$7F,$03,$3A,$92,$29,$02,$86,$4A,$2A,$02
 	.db $02,$7F,$3A,$7F,$03,$7F,$3A,$2A,$2A,$22,$7F,$2A,$7F,$12,$7F,$FE
 MusicBonus_Noise:
-	.db $86,$FD,$03,$51,$13,$71,$13,$FC,$FD,$02,$72,$61,$7F,$FC,$FE,$52
-	.db $13,$2B,$52,$7F,$13,$7F,$2B,$F3,$3A,$52,$13,$3A,$7F,$52,$7F,$13
-	.db $F3
+	.db $86,$FD,$03,$51,$13,$71,$13,$FC,$FD,$02,$72,$61,$7F,$FC,$FE
+Music_BonusPiece_Sq1:
+	.db $52,$13,$2B,$52,$7F,$13,$7F,$2B,$F3
+Music_BonusPiece_Sq2:
+	.db $3A,$52,$13,$3A,$7F,$52,$7F,$13,$F3
 MusicEggplant_Sq1:
 	.db $F8,$00,$92,$3A,$7F,$42,$7F,$4A,$7F,$7F,$7F,$3A,$7F,$42,$4A,$7F
 	.db $4A,$42,$4A,$52,$7F,$52,$7F,$4A,$7F,$42,$7F,$EC,$7F,$89,$1A,$12
@@ -1927,66 +2224,118 @@ MusicGameOver_Noise:
 	.db $FF
 MusicEnding_Sq1:
 	.db $8B,$01,$02,$09,$0A,$84,$11,$49,$83,$51,$84,$02,$12,$83,$22,$84
-	.db $2A,$3A,$83,$4A,$84,$52,$03,$83,$13,$8B,$23,$22,$F6,$03,$CD,$84
-	.db $3A,$4A,$83,$52,$84,$5A,$03,$83,$0B,$8B,$13,$03,$22,$3A,$5A,$13
-	.db $4A,$86,$42,$85,$4A,$96,$03,$8B,$52,$03,$96,$13,$2B,$AC,$2B,$8B
-	.db $4B,$FF
+	.db $2A,$3A,$83,$4A,$84,$52,$03,$83,$13,$8B,$23,$22
+	.db $F6
+	.dw Music_TitleEndingPiece_Sq1
+	.db $84,$3A,$4A,$83,$52,$84,$5A,$03,$83,$0B,$8B,$13,$03,$22,$3A,$5A
+	.db $13,$4A,$86,$42,$85,$4A,$96,$03,$8B,$52,$03,$96,$13,$2B,$AC,$2B
+	.db $8B,$4B,$FF
 MusicEnding_Sq2:
 	.db $8B,$01,$02,$09,$0A,$11,$12,$84,$12,$22,$83,$2A,$84,$3A,$4A,$83
-	.db $52,$8B,$4A,$49,$F6,$32,$CD,$84,$1A,$22,$83,$2A,$84,$32,$3A,$83
-	.db $42,$8B,$4A,$22,$49,$02,$32,$5A,$32,$86,$2A,$85,$32,$96,$4A,$8B
-	.db $3A,$4A,$84,$52,$4A,$83,$42,$84,$3A,$42,$83,$4A,$84,$52,$4A,$83
-	.db $42,$84,$3A,$4A,$83,$52,$8B,$4A,$86,$52,$85,$03,$86,$13,$85,$23
-	.db $86,$2B,$85,$3B,$8B,$03,$FF
+	.db $52,$8B,$4A,$49
+	.db $F6
+	.dw Music_TitleEndingPiece_Sq2
+	.db $84,$1A,$22,$83,$2A,$84,$32,$3A,$83,$42,$8B,$4A,$22,$49,$02,$32
+	.db $5A,$32,$86,$2A,$85,$32,$96,$4A,$8B,$3A,$4A,$84,$52,$4A,$83,$42
+	.db $84,$3A,$42,$83,$4A,$84,$52,$4A,$83,$42,$84,$3A,$4A,$83,$52,$8B
+	.db $4A,$86,$52,$85,$03,$86,$13,$85,$23,$86,$2B,$85,$3B,$8B,$03,$FF
 MusicEnding_Tri:
-	.db $8B,$01,$02,$09,$0A,$11,$12,$21,$22,$F6,$77,$CD,$21,$22,$19,$1A
-	.db $11,$12,$11,$F9,$86,$0A,$85,$12,$84,$01,$02,$83,$01,$84,$02,$01
-	.db $83,$02,$84,$01,$02,$83,$01,$84,$02,$01,$83,$02,$84,$01,$02,$83
+	.db $8B,$01,$02,$09,$0A,$11,$12,$21,$22
+	.db $F6
+	.dw Music_TitleEndingPiece_Tri
+	.db $21,$22,$19,$1A,$11,$12,$11,$F9,$86,$0A,$85,$12,$84,$01,$02,$83
 	.db $01,$84,$02,$01,$83,$02,$84,$01,$02,$83,$01,$84,$02,$01,$83,$02
-	.db $8B,$29,$86,$39,$85,$49,$86,$51,$85,$02,$86,$12,$85,$22,$8B,$29
-	.db $FF
+	.db $84,$01,$02,$83,$01,$84,$02,$01,$83,$02,$84,$01,$02,$83,$01,$84
+	.db $02,$01,$83,$02,$8B,$29,$86,$39,$85,$49,$86,$51,$85,$02,$86,$12
+	.db $85,$22,$8B,$29,$FF
 MusicEnding_Noise:
 	.db $F5,$02,$FD,$08,$83,$13,$82,$11,$FC,$8B,$7F,$96,$1F,$86,$11,$85
 	.db $11,$8B,$7F,$96,$15,$8B,$12,$02,$84,$12,$83,$11,$8B,$12,$7F,$96
 	.db $12,$84,$12,$83,$11,$8B,$11,$96,$13,$86,$11,$85,$11,$FD,$0C,$83
 	.db $13,$82,$11,$FC,$8B,$11,$FF
 MusicBoss_Sq1:
-	.db $F8,$1F,$F4,$06,$F6,$22,$D8,$F6,$0B,$D8,$F4,$01,$91,$1B,$83,$23
-	.db $2B,$33,$83,$3B,$43,$4B,$84,$53,$83,$5B,$04,$0C,$84,$14,$F9,$F4
-	.db $04,$F6,$22,$D8,$F4,$01,$F6,$0B,$D8,$F9,$84,$3B,$3B,$85,$23,$84
-	.db $23,$0B,$85,$0B,$84,$52,$52,$85,$3A,$84,$3A,$22,$85,$22,$FE
+	.db $F8,$1F,$F4,$06
+	.db $F6
+	.dw Music_BossPieceB
+	.db $F6
+	.dw Music_BossPieceA
+	.db $F4,$01,$91,$1B,$83,$23,$2B,$33,$83,$3B,$43,$4B,$84,$53,$83,$5B
+	.db $04,$0C,$84,$14,$F9,$F4,$04
+	.db $F6
+	.dw Music_BossPieceB
+	.db $F4,$01
+	.db $F6
+	.dw Music_BossPieceA
+	.db $F9,$84,$3B,$3B,$85,$23,$84,$23,$0B,$85,$0B,$84,$52,$52,$85,$3A
+	.db $84,$3A,$22,$85,$22,$FE
 MusicBoss_Sq2:
-	.db $F8,$1F,$F4,$03,$F6,$22,$D8,$F4,$09,$F6,$53,$D8,$F4,$01,$1B,$13
-	.db $85,$0B,$91,$03,$83,$0B,$13,$1B,$83,$23,$2B,$33,$84,$3B,$F9,$F6
-	.db $22,$D8,$F6,$53,$D8,$F9,$23,$23,$85,$0B,$84,$0B,$52,$85,$52,$84
-	.db $3A,$3A,$85,$22,$84,$22,$0A,$85,$0A,$FE
+	.db $F8,$1F,$F4,$03
+	.db $F6
+	.dw Music_BossPieceB
+	.db $F4,$09
+	.db $F6
+	.dw Music_BossPieceD
+	.db $F4,$01,$1B,$13,$85,$0B,$91,$03,$83,$0B,$13,$1B,$83,$23,$2B,$33
+	.db $F6
+	.dw Music_BossPieceC
+	.db $F6
+	.dw Music_BossPieceB
+	.db $F6
+	.dw Music_BossPieceD
+	.db $F9,$23,$23,$85,$0B,$84,$0B,$52,$85,$52,$84,$3A,$3A,$85,$22,$84
+	.db $22,$0A,$85,$0A,$FE
 MusicBoss_Tri:
-	.db $F4,$03,$F6,$67,$D8,$F4,$01,$0A,$12,$22,$84,$2A,$9A,$32,$32,$9E
-	.db $2A,$83,$22,$1A,$12,$83,$0A,$02,$59,$84,$51,$F9,$F6,$67,$D8,$12
-	.db $0A,$02,$84,$59,$97,$51,$94,$51,$F9,$83,$22,$3A,$52,$84,$0B,$0B
-	.db $85,$52,$84,$52,$3A,$85,$3A,$84,$22,$22,$85,$0A,$84,$0A,$51,$85
-	.db $51,$FE,$FA,$FF,$84,$52,$5A,$85,$03,$84,$0B,$13,$85,$1B,$84,$23
-	.db $1B,$85,$13,$84,$0B,$03,$85,$5A,$F3,$83,$51,$52,$39,$84,$52,$83
-	.db $21,$52,$39,$84,$52,$83,$0A,$0B,$51,$84,$0B,$83,$39,$0B,$51,$84
-	.db $0B,$83,$22,$23,$0A,$84,$23,$83,$51,$23,$0A,$84,$23,$83,$3A,$3B
-	.db $22,$84,$3B,$83,$0A,$3B,$22,$84,$3B,$F3,$FA,$FF,$91,$22,$84,$2A
-	.db $85,$32,$84,$3A,$42,$85,$4A,$84,$52,$4A,$85,$42,$84,$F3,$8D,$21
-	.db $21,$39,$39,$51,$51,$FA,$FF,$0A,$83,$F3
+	.db $F4,$03
+	.db $F6
+	.dw Music_BossPieceE
+	.db $F4,$01,$0A,$12,$22,$84,$2A,$9A,$32,$32,$9E,$2A,$83,$22,$1A,$12
+	.db $83,$0A,$02,$59,$84,$51,$F9
+	.db $F6
+	.dw Music_BossPieceE
+	.db $12,$0A,$02,$84,$59,$97,$51,$94,$51,$F9,$83,$22,$3A,$52,$84,$0B
+	.db $0B,$85,$52,$84,$52,$3A,$85,$3A,$84,$22,$22,$85,$0A,$84,$0A,$51
+	.db $85,$51,$FE
+Music_BossPieceA:
+	.db $FA,$FF,$84,$52,$5A,$85,$03,$84,$0B,$13,$85,$1B,$84,$23,$1B,$85
+	.db $13,$84,$0B,$03,$85,$5A,$F3
+Music_BossPieceB:
+	.db $83,$51,$52,$39,$84,$52,$83,$21,$52,$39,$84,$52,$83,$0A,$0B,$51
+	.db $84,$0B,$83,$39,$0B,$51,$84,$0B,$83
+Music_BossPieceC:
+	.db $22,$23,$0A,$84,$23,$83,$51,$23,$0A,$84,$23,$83,$3A,$3B,$22,$84
+	.db $3B,$83,$0A,$3B,$22,$84,$3B,$F3
+Music_BossPieceD:
+	.db $FA,$FF,$91,$22,$84,$2A,$85,$32,$84,$3A,$42,$85,$4A,$84,$52,$4A
+	.db $85,$42,$84,$F3
+Music_BossPieceE:
+	.db $8D,$21,$21,$39,$39,$51,$51,$FA,$FF,$0A,$83,$F3
 MusicAreaClear_Sq1:
-	.db $F6,$CE,$D8,$F4,$03,$F6,$CE,$D8,$F4,$00,$A4,$3B,$86,$3B,$3B,$88
-	.db $3A,$5A,$13,$3B,$7F,$13,$E0,$4B,$FF
+	.db $F6
+	.dw Music_AreaClearPiece_Sq1
+	.db $F4,$03
+	.db $F6
+	.dw Music_AreaClearPiece_Sq1
+	.db $F4,$00,$A4,$3B,$86,$3B,$3B,$88,$3A,$5A,$13,$3B,$7F,$13,$E0,$4B
+	.db $FF
 MusicAreaClear_Sq2:
-	.db $F6,$E9,$D8,$F4,$03,$F6,$E9,$D8,$F4,$00,$A4,$13,$86,$13,$13,$88
-	.db $12,$3A,$5A,$13,$7F,$5A,$E0,$23,$FF
+	.db $F6
+	.dw Music_AreaClearPiece_Sq2
+	.db $F4,$03
+	.db $F6
+	.dw Music_AreaClearPiece_Sq2
+	.db $F4,$00,$A4,$13,$86,$13,$13,$88$12,$3A,$5A,$13,$7F,$5A,$E0,$23
+	.db $FF
 MusicAreaClear_Tri:
 	.db $83,$FD,$10,$11,$12,$FC,$FD,$10,$29,$2A,$FC,$A4,$5A,$86,$5A,$5A
 	.db $88,$59,$12,$3A,$5A,$7F,$3A,$E0,$0B,$FF
 MusicAreaClear_Noise:
-	.db $E0,$02,$83,$1A,$86,$7F,$12,$88,$14,$7F,$11,$83,$1C,$1C,$FF,$86
-	.db $13,$8C,$4A,$86,$4A,$8C,$4A,$32,$FA,$20,$90,$4A,$84,$F9,$5A,$0B
-	.db $83,$13,$23,$13,$23,$13,$23,$13,$23,$F3,$86,$32,$8C,$12,$86,$12
-	.db $8C,$12,$49,$FA,$20,$90,$12,$84,$F9,$22,$2A,$83,$32,$3A,$32,$3A
-	.db $32,$3A,$32,$3A,$F3
+	.db $E0,$02,$83,$1A,$86,$7F,$12,$88,$14,$7F,$11,$83,$1C,$1C,$FF
+Music_AreaClearPiece_Sq1:
+	.db $86,$13,$8C,$4A,$86,$4A,$8C,$4A,$32,$FA,$20,$90,$4A,$84,$F9,$5A
+	.db $0B,$83,$13,$23,$13,$23,$13,$23,$13,$23,$F3
+Music_AreaClearPiece_Sq2:
+	.db $86,$32,$8C,$12,$86,$12,$8C,$12,$49,$FA,$20,$90,$12,$84,$F9,$22
+	.db $2A,$83,$32,$3A,$32,$3A,$32,$3A,$32,$3A,$F3
 MusicRoundClear_Sq1:
 	.db $87,$03,$8E,$2B,$87,$2B,$8E,$2B,$03,$9C,$1B,$53,$87,$4B,$7F,$2B
 	.db $4B,$D4,$F2,$04,$FF
